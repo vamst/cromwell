@@ -1,31 +1,24 @@
 package cromwell.backend.standard.callcaching
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import cromwell.backend.standard.callcaching.BlacklistCache._
-import cromwell.core.WorkflowId
+import cromwell.core.{CacheConfig, WorkflowId}
 
-import scala.concurrent.duration.FiniteDuration
-
-class BlacklistCache(concurrency: Int, ttl: FiniteDuration) {
+class BlacklistCache(config: CacheConfig) {
   val cache = {
     // Queries to the blacklist cache return false by default (i.e. not blacklisted).
-    val falseLoader = new CacheLoader[BlacklistCacheKey, java.lang.Boolean]() {
-      override def load(key: BlacklistCacheKey): java.lang.Boolean = false
+    val falseLoader = new CacheLoader[String, java.lang.Boolean]() {
+      override def load(key: String): java.lang.Boolean = false
     }
 
     CacheBuilder.
       newBuilder().
-      concurrencyLevel(concurrency).
-      expireAfterWrite(ttl.length, ttl.unit).
-      build[BlacklistCacheKey, java.lang.Boolean](falseLoader)
+      concurrencyLevel(config.concurrency).
+      maximumSize(config.size).
+      expireAfterWrite(config.ttl.length, config.ttl.unit).
+      build[String, java.lang.Boolean](falseLoader)
   }
 
-  def isBlacklisted(rootWorkflowId: WorkflowId, bucket: String): Boolean = cache.get(BlacklistCacheKey(rootWorkflowId, bucket))
+  def isBlacklisted(bucket: String): Boolean = cache.get(bucket)
 
-  def blacklist(rootWorkflowId: WorkflowId, bucket: String): Unit = cache.put(BlacklistCacheKey(rootWorkflowId, bucket), true)
-}
-
-
-object BlacklistCache {
-  case class BlacklistCacheKey(rootWorkflowId: WorkflowId, bucketName: String)
+  def blacklist(rootWorkflowId: WorkflowId, bucket: String): Unit = cache.put(bucket, true)
 }

@@ -42,6 +42,12 @@ import wom.graph.GraphNodePort.OutputPort
 import wom.graph._
 import wom.graph.expression.{ExposedExpressionNode, TaskCallInputExpressionNode}
 import wom.values._
+<<<<<<< HEAD
+=======
+import net.ceedubs.ficus.Ficus._
+import com.typesafe.config.Config
+import cromwell.backend.standard.callcaching.BlacklistCache
+>>>>>>> fa42cdace... stash
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -613,7 +619,8 @@ case class WorkflowExecutionActor(params: WorkflowExecutionActorParams)
       backendName,
       workflowDescriptor.callCachingMode,
       command,
-      fileHashCacheActor = params.fileHashCacheActor
+      fileHashCacheActor = params.fileHashCacheActor,
+      blacklistCache = params.blacklistCache
     )
 
     val ejeaRef = context.actorOf(ejeaProps, ejeaName)
@@ -765,7 +772,8 @@ object WorkflowExecutionActor {
                                            startState: StartableState,
                                            rootConfig: Config,
                                            totalJobsByRootWf: AtomicInteger,
-                                           fileHashCacheActor: Option[ActorRef]
+                                           fileHashCacheActor: Option[ActorRef],
+                                           blacklistCache: Option[BlacklistCache]
                                          )
 
   def props(workflowDescriptor: EngineWorkflowDescriptor,
@@ -782,7 +790,8 @@ object WorkflowExecutionActor {
             startState: StartableState,
             rootConfig: Config,
             totalJobsByRootWf: AtomicInteger,
-            fileHashCacheActor: Option[ActorRef]): Props = {
+            fileHashCacheActor: Option[ActorRef],
+            blacklistCache: Option[BlacklistCache]): Props = {
     Props(
       WorkflowExecutionActor(
         WorkflowExecutionActorParams(
@@ -800,7 +809,8 @@ object WorkflowExecutionActor {
           startState,
           rootConfig,
           totalJobsByRootWf,
-          fileHashCacheActor = fileHashCacheActor
+          fileHashCacheActor = fileHashCacheActor,
+          blacklistCache = blacklistCache
         )
       )
     ).withDispatcher(EngineDispatcher)

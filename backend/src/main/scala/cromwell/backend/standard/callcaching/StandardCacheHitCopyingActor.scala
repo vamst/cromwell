@@ -21,7 +21,6 @@ import cromwell.core.path.{Path, PathCopier}
 import cromwell.core.simpleton.{WomValueBuilder, WomValueSimpleton}
 import wom.values.WomSingleFile
 
-import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -43,6 +42,8 @@ trait StandardCacheHitCopyingActorParams {
     * The number of this copy attempt (so that listeners can ignore "timeout"s from previous attempts)
     */
   def cacheCopyAttempt: Int
+
+  def blacklistCache: Option[BlacklistCache]
 }
 
 /** A default implementation of the cache hit copying params. */
@@ -53,7 +54,8 @@ case class DefaultStandardCacheHitCopyingActorParams
   override val serviceRegistryActor: ActorRef,
   override val ioActor: ActorRef,
   override val configurationDescriptor: BackendConfigurationDescriptor,
-  override val cacheCopyAttempt: Int
+  override val cacheCopyAttempt: Int,
+  override val blacklistCache: Option[BlacklistCache]
 ) extends StandardCacheHitCopyingActorParams
 
 object StandardCacheHitCopyingActor {
@@ -65,8 +67,6 @@ object StandardCacheHitCopyingActor {
   case object WaitingForIoResponses extends StandardCacheHitCopyingActorState
   case object FailedState extends StandardCacheHitCopyingActorState
   case object WaitingForOnSuccessResponse extends StandardCacheHitCopyingActorState
-
-  val blacklistCache = new BlacklistCache(concurrency = 20, ttl = 20 minutes)
 
   // TODO: this mechanism here is very close to the one in CallCacheHashingJobActorData
   // Abstracting it might be valuable
@@ -130,7 +130,6 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
   def destinationJobDetritusPaths: Map[String, Path] = jobPaths.detritusPaths
   
   lazy val ioActor = standardParams.ioActor
-  val rootWorkflowId = jobDescriptor.workflowDescriptor.rootWorkflowId
 
   startWith(Idle, None)
 
@@ -192,7 +191,11 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
           stay() using Option(newData)
       }
     case Event(IoForbiddenFailure(command: IoCommand[_], failure, forbiddenPath), Some(data)) =>
-      extractBlacklistPrefix(forbiddenPath) foreach { p => blacklistCache.blacklist(rootWorkflowId, p)}
+      for {
+        prefix <- extractBlacklistPrefix(forbiddenPath)
+        cache <- blacklistCache
+        cache.blacklist(prefix)
+      } yield()
       failAndAwaitPendingResponses(failure, command, data)
     case Event(IoFailure(command: IoCommand[_], failure), Some(data)) =>
       failAndAwaitPendingResponses(failure, command, data)

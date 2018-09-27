@@ -9,9 +9,9 @@ import cats.data.NonEmptyList
 import com.typesafe.config.Config
 import common.exception.ThrowableAggregation
 import cromwell.backend.async.KnownJobFailureException
-import cromwell.backend.standard.callcaching.RootWorkflowFileHashCacheActor
+import cromwell.backend.standard.callcaching.{BlacklistCache, RootWorkflowFileHashCacheActor}
 import cromwell.core.Dispatcher.EngineDispatcher
-import cromwell.core.{WorkflowAborted, WorkflowId}
+import cromwell.core.{CacheConfig, WorkflowAborted, WorkflowId}
 import cromwell.engine.backend.BackendSingletonCollection
 import cromwell.engine.workflow.WorkflowActor._
 import cromwell.engine.workflow.WorkflowManagerActor._
@@ -23,6 +23,7 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.Try
 
 object WorkflowManagerActor {
@@ -295,6 +296,11 @@ class WorkflowManagerActor(params: WorkflowManagerActorParams)
 
     val fileHashCacheActor: Option[ActorRef] =
       if (fileHashCacheEnabled) Option(context.system.actorOf(RootWorkflowFileHashCacheActor.props(params.ioActor))) else None
+
+    val callCachingBlacklistCache: Option[BlacklistCache] = for {
+      config <- config.as[Option[Config]]("call-caching.blacklist-cache")
+      cacheConfig = CacheConfig.fromConfig(config, defaultConcurrency = 1000, defaultSize = 1000, defaultTtl = 1 hour)
+    } yield BlacklistCache()
 
     val wfProps = WorkflowActor.props(
       workflowId = workflowId,
