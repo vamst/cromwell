@@ -657,7 +657,8 @@ case class WorkflowExecutionActor(params: WorkflowExecutionActorParams)
         params.startState,
         params.rootConfig,
         params.totalJobsByRootWf,
-        fileHashCacheActor = params.fileHashCacheActor), s"$workflowIdForLogging-SubWorkflowExecutionActor-${key.tag}"
+        fileHashCacheActor = params.fileHashCacheActor,
+        blacklistCache = params.blacklistCache), s"$workflowIdForLogging-SubWorkflowExecutionActor-${key.tag}"
     )
 
     context watch sweaRef

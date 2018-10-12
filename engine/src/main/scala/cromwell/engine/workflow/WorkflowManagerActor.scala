@@ -300,7 +300,7 @@ class WorkflowManagerActor(params: WorkflowManagerActorParams)
     val callCachingBlacklistCache: Option[BlacklistCache] = for {
       config <- config.as[Option[Config]]("call-caching.blacklist-cache")
       cacheConfig = CacheConfig.fromConfig(config, defaultConcurrency = 1000, defaultSize = 1000, defaultTtl = 1 hour)
-    } yield BlacklistCache()
+    } yield BlacklistCache(cacheConfig)
 
     val wfProps = WorkflowActor.props(
       workflowId = workflowId,
@@ -321,7 +321,8 @@ class WorkflowManagerActor(params: WorkflowManagerActorParams)
       serverMode = params.serverMode,
       workflowHeartbeatConfig = params.workflowHeartbeatConfig,
       totalJobsByRootWf = new AtomicInteger(),
-      fileHashCacheActor = fileHashCacheActor)
+      fileHashCacheActor = fileHashCacheActor,
+      blacklistCache = callCachingBlacklistCache)
     val wfActor = context.actorOf(wfProps, name = s"WorkflowActor-$workflowId")
 
     wfActor ! SubscribeTransitionCallBack(self)

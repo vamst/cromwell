@@ -21,7 +21,6 @@ import cromwell.core.path.{Path, PathCopier}
 import cromwell.core.simpleton.{WomValueBuilder, WomValueSimpleton}
 import wom.values.WomSingleFile
 
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -193,8 +192,8 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
     case Event(IoForbiddenFailure(command: IoCommand[_], failure, forbiddenPath), Some(data)) =>
       for {
         prefix <- extractBlacklistPrefix(forbiddenPath)
-        cache <- blacklistCache
-        cache.blacklist(prefix)
+        cache <- standardParams.blacklistCache
+        _ = cache.blacklist(prefix)
       } yield()
       failAndAwaitPendingResponses(failure, command, data)
     case Event(IoFailure(command: IoCommand[_], failure), Some(data)) =>
@@ -355,6 +354,9 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
 
   private def isSourceBlacklisted(command: CopyOutputsCommand): Boolean = {
     val path = sourcePathFromCopyOutputsCommand(command)
-    extractBlacklistPrefix(path) exists { prefix => blacklistCache.isBlacklisted(rootWorkflowId, prefix) }
+    (for {
+      prefix <- extractBlacklistPrefix(path)
+      cache <- standardParams.blacklistCache
+    } yield cache.isBlacklisted(prefix)).getOrElse(false)
   }
 }
