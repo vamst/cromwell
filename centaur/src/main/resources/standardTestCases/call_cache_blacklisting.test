@@ -1,0 +1,15 @@
+name: call_cache_blacklisting_papi
+testFormat: workflowsuccess
+backends: [Papiv2]
+
+files {
+  workflow: call_cache_blacklisting/call_cache_blacklisting.wdl
+  # SA2 has permissions on both buckets but SA1 has permissions only on its own, so use SA2
+  # to run the first workflow and SA1 to run the second.
+  options: rendered/call_cache_blacklisting_sa2.options
+  second-options: rendered/call_cache_blacklisting_sa1.options
+}
+
+metadata {
+  status: Succeeded
+}

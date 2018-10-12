@@ -23,6 +23,8 @@ export GOOGLE_REFRESH_TOKEN_PATH
 mkdir -p "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
 cp \
     "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/private_docker_papi_v2_usa.options" \
+    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/call_cache_blacklisting_sa1.options" \
+    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/call_cache_blacklisting_sa2.options" \
     "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
 
 # Excluded tests:

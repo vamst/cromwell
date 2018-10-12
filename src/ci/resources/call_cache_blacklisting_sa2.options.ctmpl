@@ -1,0 +1,6 @@
+{{with $cromwellServiceAccount := vault (printf "secret/dsde/cromwell/common/cromwell-service-account-perf-sa2.json")}}
+{
+   "user_service_account_json": "{{$cromwellServiceAccount.Data | toJSON | replaceAll "\\" "\\\\" | replaceAll "\"" "\\\"" }}",
+   "jes_gcs_root": "gs://centaur-sa2"
+}
+{{end}}
