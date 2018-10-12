@@ -16,6 +16,7 @@ import common.validation.ErrorOr.ErrorOr
 import common.validation.Validation._
 import cromwell.backend.BackendJobExecutionActor._
 import cromwell.backend._
+import cromwell.backend.standard.callcaching.BlacklistCache
 import cromwell.core.Dispatcher._
 import cromwell.core.ExecutionStatus._
 import cromwell.core._
@@ -42,12 +43,6 @@ import wom.graph.GraphNodePort.OutputPort
 import wom.graph._
 import wom.graph.expression.{ExposedExpressionNode, TaskCallInputExpressionNode}
 import wom.values._
-<<<<<<< HEAD
-=======
-import net.ceedubs.ficus.Ficus._
-import com.typesafe.config.Config
-import cromwell.backend.standard.callcaching.BlacklistCache
->>>>>>> fa42cdace... stash
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
