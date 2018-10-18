@@ -9,7 +9,7 @@ import cromwell.backend.google.pipelines.common.PipelinesApiAttributes.Localizat
 import cromwell.backend.google.pipelines.common.api.PipelinesApiRequestFactory.CreatePipelineParameters
 import cromwell.backend.google.pipelines.v2alpha1.PipelinesConversions._
 import cromwell.backend.google.pipelines.v2alpha1.ToParameter.ops._
-import cromwell.backend.google.pipelines.v2alpha1.api.ActionBuilder.Labels.Value
+import cromwell.backend.google.pipelines.v2alpha1.api.ActionBuilder.Labels.{Key, Value}
 import cromwell.backend.google.pipelines.v2alpha1.api.ActionBuilder._
 import cromwell.backend.google.pipelines.v2alpha1.api.ActionCommands._
 import cromwell.backend.google.pipelines.v2alpha1.api.Delocalization._
@@ -21,6 +21,7 @@ import scala.concurrent.duration._
 object Delocalization {
   private val logsRoot = "/google/logs"
   val plainTextContentType = Option(ContentTypes.`text/plain(UTF-8)`)
+  val CwlOutputJsonProcessingDockerImage = "stedolan/jq@sha256:a61ed0bca213081b64be94c5e1b402ea58bc549f457c2682a86704dd55231e09"
 }
 
 trait Delocalization {
@@ -30,21 +31,21 @@ trait Delocalization {
   private def delocalizeLogsAction(gcsLogPath: Path)(implicit localizationConfiguration: LocalizationConfiguration) = {
     cloudSdkShellAction(
     delocalizeDirectory(DefaultPathBuilder.build(logsRoot).get, gcsLogPath, plainTextContentType)
-    )(flags = List(ActionFlag.AlwaysRun))
+    )(flags = List(ActionFlag.AlwaysRun), labels = Map(Key.Tag -> Value.Delocalization))
   }
 
   // Used for the final copy of the logs to make sure we have the most up to date version before terminating the job
   private def copyAggregatedLogToLegacyPath(callExecutionContainerRoot: Path, gcsLegacyLogPath: Path)(implicit localizationConfiguration: LocalizationConfiguration): Action = {
     cloudSdkShellAction(
       delocalizeFileTo(DefaultPathBuilder.build(aggregatedLog).get, gcsLegacyLogPath, plainTextContentType)
-    )(flags = List(ActionFlag.AlwaysRun))
+    )(flags = List(ActionFlag.AlwaysRun), labels = Map(Key.Tag -> Value.Delocalization))
   }
 
   // Periodically copies the logs out to GCS
   private def copyAggregatedLogToLegacyPathPeriodic(callExecutionContainerRoot: Path, gcsLegacyLogPath: Path)(implicit localizationConfiguration: LocalizationConfiguration): Action = {
     cloudSdkShellAction(
       every(30.seconds) { delocalizeFileTo(DefaultPathBuilder.build(aggregatedLog).get, gcsLegacyLogPath, plainTextContentType) }
-    )(flags = List(ActionFlag.RunInBackground))
+    )(flags = List(ActionFlag.RunInBackground), labels = Map(Key.Tag -> Value.Background))
   }
 
   private def parseOutputJsonAction(containerCallRoot: String, outputDirectory: String, outputFile: String, mounts: List[Mount]): Action = {
@@ -62,12 +63,13 @@ trait Delocalization {
     )
 
     ActionBuilder
-      .withImage("stedolan/jq@sha256:a61ed0bca213081b64be94c5e1b402ea58bc549f457c2682a86704dd55231e09")
+      .withImage(CwlOutputJsonProcessingDockerImage)
       .setCommands(commands.asJava)
       .withMounts(mounts)
       .setEntrypoint("/bin/bash")
       // Saves us some time if something else fails before we get to run this action
       .withFlags(List(ActionFlag.DisableImagePrefetch))
+      .withLabels(Map(Key.Tag -> Value.Delocalization))
   }
 
   private def delocalizeOutputJsonFilesAction(cloudCallRoot: Path, inputFile: String, workflowRoot: String, mounts: List[Mount]): Action = {
@@ -85,7 +87,7 @@ trait Delocalization {
          */
         s""" | xargs -I % sh -c '${recoverRequesterPaysError(cloudCallRoot)(gsutilCommand)}'"""
 
-    ActionBuilder.cloudSdkShellAction(command)(mounts)
+    ActionBuilder.cloudSdkShellAction(command)(mounts = mounts, labels = Map(Key.Tag -> Value.Delocalization))
   }
 
   def deLocalizeActions(createPipelineParameters: CreatePipelineParameters,
