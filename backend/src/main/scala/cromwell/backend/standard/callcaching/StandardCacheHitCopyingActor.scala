@@ -191,8 +191,8 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
       }
     case Event(IoForbiddenFailure(command: IoCommand[_], failure, forbiddenPath), Some(data)) =>
       for {
-        prefix <- extractBlacklistPrefix(forbiddenPath)
         cache <- standardParams.blacklistCache
+        prefix <- extractBlacklistPrefix(forbiddenPath)
         _ = cache.blacklist(prefix)
       } yield()
       failAndAwaitPendingResponses(failure, command, data)
