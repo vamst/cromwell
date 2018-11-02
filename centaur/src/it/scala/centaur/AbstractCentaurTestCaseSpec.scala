@@ -26,7 +26,7 @@ abstract class AbstractCentaurTestCaseSpec(cromwellBackends: List[String]) exten
   SuccessReporters.getClass
 
   private def testCases(baseFile: File): List[CentaurTestCase] = {
-    val files = baseFile.list.filter(_.isRegularFile).toList
+    val files = baseFile.list.filter(f => f.isRegularFile && f.path.endsWith(".test")).toList
     val testCases = files.traverse(CentaurTestCase.fromFile)
 
     testCases match {
