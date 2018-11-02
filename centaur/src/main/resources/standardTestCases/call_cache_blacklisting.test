@@ -1,6 +1,8 @@
 name: call_cache_blacklisting_papi
 testFormat: workflowsuccess
 backends: [Papiv2]
+# Don't remember if I actually wrote the WDL but it isn't here now. :(
+ignore: true
 
 files {
   workflow: call_cache_blacklisting/call_cache_blacklisting.wdl
