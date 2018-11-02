@@ -3,6 +3,7 @@ package cromwell.core
 import com.typesafe.config.Config
 import common.exception.ThrowableAggregation
 import cromwell.core.path.Path
+import mouse.boolean._
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -32,10 +33,15 @@ case class CacheConfig(concurrency: Int, size: Long, ttl: FiniteDuration)
 
 import net.ceedubs.ficus.Ficus._
 object CacheConfig {
-  def fromConfig(caching: Config, defaultConcurrency: Int, defaultSize: Long, defaultTtl: FiniteDuration): CacheConfig = {
-    val ttl = caching.as[Option[FiniteDuration]]("ttl").getOrElse(defaultTtl)
-    val concurrency = caching.as[Option[Int]]("concurrency").getOrElse(defaultConcurrency)
-    val size = caching.as[Option[Long]]("size").getOrElse(defaultSize)
-    CacheConfig(concurrency = concurrency, size = size, ttl = ttl)
+  def fromConfig(caching: Config, defaultConcurrency: Int, defaultSize: Long, defaultTtl: FiniteDuration): Option[CacheConfig] = {
+    val cachingEnabled = caching.as[Option[Boolean]](path = "enabled").getOrElse(false)
+
+    cachingEnabled.option(
+      CacheConfig(
+        concurrency = caching.as[Option[Int]]("concurrency").getOrElse(defaultConcurrency),
+        size = caching.as[Option[Long]]("size").getOrElse(defaultSize),
+        ttl = caching.as[Option[FiniteDuration]]("ttl").getOrElse(defaultTtl)
+      )
+    )
   }
 }

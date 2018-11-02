@@ -299,7 +299,7 @@ class WorkflowManagerActor(params: WorkflowManagerActorParams)
 
     val callCachingBlacklistCache: Option[BlacklistCache] = for {
       config <- config.as[Option[Config]]("call-caching.blacklist-cache")
-      cacheConfig = CacheConfig.fromConfig(config, defaultConcurrency = 1000, defaultSize = 1000, defaultTtl = 1 hour)
+      cacheConfig <- CacheConfig.fromConfig(config, defaultConcurrency = 1000, defaultSize = 1000, defaultTtl = 1 hour)
     } yield BlacklistCache(cacheConfig)
 
     val wfProps = WorkflowActor.props(

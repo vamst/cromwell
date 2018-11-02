@@ -144,9 +144,7 @@ class WdlDraft2LanguageFactory(override val config: Config) extends LanguageFact
     for {
       _ <- enabled.option(())
       caching <- config.as[Option[Config]]("caching")
-      cachingEnabled <- caching.as[Option[Boolean]](path = "enabled")
-      if cachingEnabled
-      cc = CacheConfig.fromConfig(caching, defaultConcurrency = 2, defaultSize = 1000L, defaultTtl = 20 minutes)
+      cc <- CacheConfig.fromConfig(caching, defaultConcurrency = 2, defaultSize = 1000L, defaultTtl = 20 minutes)
     } yield cc
   }
 
