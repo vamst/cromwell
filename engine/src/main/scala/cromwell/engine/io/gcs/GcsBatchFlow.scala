@@ -30,7 +30,7 @@ object GcsBatchFlow {
 
 class GcsBatchFlow(batchSize: Int, scheduler: Scheduler, onRetry: IoCommandContext[_] => Throwable => Unit)(implicit ec: ExecutionContext) {
 
-  private val ForbiddenPattern = ".*does not have storage.objects.get access to ([^/]+).*".r.pattern
+  private val ForbiddenPattern = ".*does not have storage\\.objects\\.get access to ([^/]+).*".r.pattern
 
   // Does not carry any authentication, assumes all underlying requests are properly authenticated
   private val httpRequestInitializer = new HttpRequestInitializer {
@@ -144,14 +144,14 @@ class GcsBatchFlow(batchSize: Int, scheduler: Scheduler, onRetry: IoCommandConte
         case Some(waitTime) =>
           onRetry(context)(failure)
           akka.pattern.after(waitTime, scheduler)(Future.successful(GcsBatchRetry(context.next, failure)))
-        case None =>
-          val matcher = ForbiddenPattern.matcher(failure.getMessage)
-          if (matcher.matches()) failForbidden(context, failure, forbiddenPath = matcher.group(1))
-          else fail(context, failure)
+        case None => fail(context, failure)
       }
       
-    // Otherwise just fail the command
-    case failure => fail(context, failure)
+    // Otherwise just fail the command, either with a specific Forbidden failure or just generic failure.
+    case failure =>
+      val matcher = ForbiddenPattern.matcher(failure.getMessage)
+      if (matcher.matches()) failForbidden(context, failure, forbiddenPath = matcher.group(1))
+      else fail(context, failure)
   }
 
   /**
