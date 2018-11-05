@@ -193,13 +193,11 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
           commands foreach sendIoCommand
           stay() using Option(newData)
       }
-    case Event(IoForbiddenFailure(command: IoCommand[_], failure, forbiddenPath), Some(data)) =>
-      for {
-        cache <- standardParams.blacklistCache
-        prefix <- extractBlacklistPrefix(forbiddenPath)
-        _ = cache.blacklist(prefix)
-      } yield()
-      failAndAwaitPendingResponses(failure, command, data)
+    case Event(f: IoForbiddenFailure[_], Some(data)) =>
+      handleForbidden(
+        path = f.forbiddenPath,
+        andThen = failAndAwaitPendingResponses(f.failure, f.command, data)
+      )
     case Event(IoFailure(command: IoCommand[_], failure), Some(data)) =>
       failAndAwaitPendingResponses(failure, command, data)
     // Should not be possible
@@ -207,17 +205,14 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
   }
 
   when(FailedState) {
+    case Event(f: IoForbiddenFailure[_], Some(data)) =>
+      handleForbidden(
+        path = f.forbiddenPath,
+        andThen = stayOrStopInFailedState(f, data)
+      )
     // At this point success or failure doesn't matter, we've already failed this hit
     case Event(response: IoAck[_], Some(data)) =>
-      val (newData, commandState) = data.commandComplete(response.command)
-      commandState match {
-        // If we're still waiting for some responses, stay
-        case StillWaiting => stay() using Option(newData)
-        // Otherwise we're done
-        case _ =>
-          context stop self
-          stay()
-      }
+      stayOrStopInFailedState(response, data)
   }
 
   whenUnhandled {
@@ -226,6 +221,28 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
     case Event(unexpected, _) =>
       log.warning(s"Backend cache hit copying actor received an unexpected message: $unexpected in state $stateName")
       stay()
+  }
+
+  private def stayOrStopInFailedState(response: IoAck[_], data: StandardCacheHitCopyingActorData): State = {
+    val (newData, commandState) = data.commandComplete(response.command)
+    commandState match {
+      // If we're still waiting for some responses, stay
+      case StillWaiting => stay() using Option(newData)
+      // Otherwise we're done
+      case _ =>
+        context stop self
+        stay()
+    }
+  }
+
+  /* Blacklist by prefix if appropriate. */
+  private def handleForbidden[T](path: String, andThen: => State): State = {
+    for {
+      cache <- standardParams.blacklistCache
+      prefix <- extractBlacklistPrefix(path)
+      _ = cache.blacklist(prefix)
+    } yield()
+    andThen
   }
 
   def succeedAndStop(returnCode: Option[Int], copiedJobOutputs: CallOutputs, detritusMap: DetritusMap) = {
