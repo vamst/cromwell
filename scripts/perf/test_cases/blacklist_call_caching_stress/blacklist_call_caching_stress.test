@@ -1,4 +1,4 @@
-name: call_caching_stress_no_hint
+name: blacklist_call_caching_stress
 testFormat: workflowsuccess
 
 files {
