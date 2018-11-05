@@ -616,10 +616,10 @@ class MetadataBuilderActorSpec extends TestKitSuite("Metadata") with AsyncFlatSp
     val actuals = calls map filterEventsByCall(actual)
     val expecteds = calls map filterEventsByCall(expectations)
 
-    (actuals zip expecteds) foreach {
-      case (as, es) => (as.toList.map { _.toString } sorted) shouldBe (es.toList.map { _.toString } sorted)
+    val matchesExpectations = (actuals zip expecteds) map {
+      case (as, es) => (as.toList.map { _.toString } sorted) == (es.toList.map { _.toString } sorted)
     }
-    1 shouldBe 1
+    matchesExpectations.reduceLeft(_ && _) shouldBe true
   }
 }
 
