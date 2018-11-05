@@ -1,0 +1,12 @@
+name: bcbio_joint_gvcf
+testFormat: workflowsuccess
+backends: [Papiv2]
+
+files {
+  workflow: cwl/bcbio/gvcf-joint-workflow/main-gvcf-joint.cwl
+  inputs: cwl/bcbio/gvcf-joint-workflow/main-gvcf-joint-samples.cwl
+}
+
+metadata {
+  status: Succeeded
+}
