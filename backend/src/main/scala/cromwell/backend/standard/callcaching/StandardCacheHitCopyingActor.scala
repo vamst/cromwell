@@ -139,7 +139,11 @@ abstract class StandardCacheHitCopyingActor(val standardParams: StandardCacheHit
 
   when(Idle) {
     case Event(command: CopyOutputsCommand, None) if isSourceBlacklisted(command) =>
-      failAndStop(new IllegalArgumentException(s"Source bucket for cache hit copy in root workflow ${jobDescriptor.workflowDescriptor.rootWorkflowId} has been blacklisted: ${extractBlacklistPrefix(command)}"))
+      val rootWorkflowId = jobDescriptor.workflowDescriptor.rootWorkflowId
+      // The `.get` is safe because `isSourceBlacklisted` flatMaps `extractBlacklistPrefix` and could not have returned true
+      // unless `isSourceBlacklisted` was a `Some`.
+      val blacklistedBucket = extractBlacklistPrefix(command).get
+      failAndStop(new IllegalArgumentException(s"Source bucket for cache hit copy in root workflow $rootWorkflowId has been blacklisted: $blacklistedBucket"))
 
     case Event(CopyOutputsCommand(simpletons, jobDetritus, returnCode), None) =>
 
